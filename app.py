@@ -4,9 +4,9 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-# ==============================
+
 # KONFIGURASI HALAMAN
-# ==============================
+
 st.set_page_config(page_title="Face Recognition - PCD", layout="wide")
 st.title("Deployment Sistem Deteksi & Pengenalan Wajah")
 st.markdown("""
@@ -14,9 +14,9 @@ Aplikasi ini merupakan hasil **deployment pengolahan citra digital** menggunakan
 Dapat digunakan untuk **mendeteksi dan mengenali wajah** baik melalui **unggahan gambar** maupun **kamera realtime**.
 """)
 
-# ==============================
+
 # LOAD MODEL DAN LABEL
-# ==============================
+
 MODEL_PATH = "model_lbph.yml"
 LABELS_PATH = "labels.npy"
 
@@ -28,14 +28,14 @@ except Exception as e:
     st.error("[!] Gagal memuat model atau label. Pastikan file `model_lbph.yml` dan `labels.npy` tersedia di direktori aplikasi.")
     st.stop()
 
-# ==============================
+
 # LOAD CLASSIFIER WAJAH
-# ==============================
+
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
-# ==============================
+
 # FUNGSI PENGENALAN WAJAH
-# ==============================
+
 def recognize_faces(image):
     img = np.array(image.convert('RGB'))
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -59,14 +59,14 @@ def recognize_faces(image):
 
     return img, gray, recognized
 
-# ==============================
+
 # SIDEBAR MENU
-# ==============================
+
 menu = st.sidebar.radio("Pilih Mode:", ["Upload Gambar", "Webcam"])
 
-# ==============================
+
 # MODE UPLOAD GAMBAR
-# ==============================
+
 if menu == "Upload Gambar":
     uploaded_file = st.file_uploader("Unggah Gambar", type=["jpg", "jpeg", "png"])
     if uploaded_file:
@@ -106,9 +106,9 @@ if menu == "Upload Gambar":
         if st.button("Reset"):
             st.rerun()
 
-# ==============================
+
 # MODE WEBCAM
-# ==============================
+
 elif menu == "Webcam":
     run = st.checkbox("Aktifkan Kamera")
     FRAME_WINDOW = st.image([])
@@ -135,9 +135,9 @@ elif menu == "Webcam":
     camera.release()
     cv2.destroyAllWindows()
 
-# ==============================
+
 # FOOTER
-# ==============================
+
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown(
     "<p style='text-align:center;color:gray;'>Dibuat oleh <b>Rifaudin</b> | Mata Kuliah Pengolahan Citra Digital | Universitas XYZ</p>",
