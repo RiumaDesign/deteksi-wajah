@@ -5,90 +5,107 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-# Konfigurasi Aplikasi
+# KONFIGURASI HALAMAN
+
+st.set_page_config(page_title="Face Recognition - PCD", layout="wide")
+st.title("Deployment Sistem Deteksi & Pengenalan Wajah")
+st.markdown("""
+Aplikasi ini merupakan hasil **deployment pengolahan citra digital** menggunakan **OpenCV + LBPH**.
+Dapat digunakan untuk **mengenali wajah** baik melalui **upload gambar** maupun **kamera realtime**.
+""")
+
+
+# LOAD MODEL DAN LABEL
 
 MODEL_PATH = "model_lbph.yml"
 LABELS_PATH = "labels.npy"
 
-recognizer = cv2.face.LBPHFaceRecognizer_create()
-recognizer.read(MODEL_PATH)
-label_dict = np.load(LABELS_PATH, allow_pickle=True).item()
+try:
+    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    recognizer.read(MODEL_PATH)
+    label_dict = np.load(LABELS_PATH, allow_pickle=True).item()
+except Exception as e:
+    st.error("[!] Gagal memuat model atau label. Pastikan file model_lbph.yml dan labels.npy tersedia.")
+    st.stop()
+
+
+# LOAD CLASSIFIER WAJAH
+
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
-st.set_page_config(page_title="Face Recognition LBPH", layout="wide")
-st.title("Face Recognition")
-st.markdown("Gunakan aplikasi ini untuk **mengenali wajah** sekaligus **melihat tahapan pengolahan citra digital**.")
 
-
-# Fungsi Proses Wajah
+# FUNGSI PENGENALAN WAJAH
 
 def recognize_faces(image):
-    img_rgb = np.array(image.convert('RGB'))
-    gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+    img = np.array(image.convert('RGB'))
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    img_result = img_rgb.copy()
     recognized = []
-
     for (x, y, w, h) in faces:
         roi = gray[y:y+h, x:x+w]
         label_id, conf = recognizer.predict(roi)
-        name = label_dict.get(label_id, "Unknown") if conf < 80 else "Unknown"
+
+        if conf < 80:
+            name = label_dict.get(label_id, "Unknown")
+        else:
+            name = "Unknown"
 
         recognized.append(name)
-        cv2.rectangle(img_result, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(img_result, f"{name} ({conf:.0f})", (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        cv2.rectangle(img, (x, y), (x+w, y+h), (0,255,0), 2)
+        cv2.putText(img, f"{name} ({conf:.1f})", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
 
-    return img_rgb, gray, img_result, recognized
-
-
-# Sidebar Menu
-
-menu = st.sidebar.radio("Pilih Mode", ["Upload Gambar", "Webcam"])
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Dibuat oleh Rifaudin**<br>Pengolahan Citra Digital", unsafe_allow_html=True)
+    return img, gray, recognized
 
 
-# MODE 1: Upload Gambar
+# SIDEBAR MENU
+
+menu = st.sidebar.radio("Pilih Mode:", ["Upload Gambar", "Webcam"])
+
+
+# MODE UPLOAD GAMBAR
 
 if menu == "Upload Gambar":
-    uploaded_file = st.file_uploader("Upload gambar wajah", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Unggah Gambar", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Citra Asli", use_container_width=True)
+        st.image(image, caption="Gambar yang Diupload", use_container_width=True)
 
-        if st.button("Deteksi & Kenali"):
-            rgb, gray, result, names = recognize_faces(image)
+        if st.button("Deteksi dan Kenali"):
+            result_img, gray_img, results = recognize_faces(image)
+
+            # Visualisasi Tahapan Pengolahan Citra
+            st.subheader("Tahapan Pengolahan Citra Digital")
+            edges = cv2.Canny(gray_img, 100, 200)
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.image(rgb, caption="Citra RGB", use_container_width=True)
+                st.image(image, caption="Citra Asli", use_container_width=True)
             with col2:
-                st.image(gray, caption="Citra Grayscale", use_container_width=True)
+                st.image(gray_img, caption="Grayscale", use_container_width=True)
             with col3:
-                st.image(result, caption="Hasil Deteksi Wajah", use_container_width=True)
+                st.image(edges, caption="Deteksi Tepi (Canny)", use_container_width=True)
 
-            # Histogram Grayscale
-            st.markdown("Histogram Intensitas")
+            # Histogram
             fig, ax = plt.subplots()
-            ax.hist(gray.ravel(), bins=256, range=[0, 256], color='gray')
-            ax.set_title("Histogram Intensitas (Grayscale)")
-            ax.set_xlabel("Intensitas Piksel")
-            ax.set_ylabel("Frekuensi")
+            ax.hist(gray_img.ravel(), bins=256, color='gray')
+            ax.set_title("Histogram Grayscale")
             st.pyplot(fig)
 
-            st.success(f"Jumlah wajah terdeteksi: {len(names)}")
-            st.write("Nama yang dikenali:", names)
+            # Hasil deteksi wajah
+            st.subheader("Hasil Pengenalan Wajah")
+            st.image(result_img, caption="Hasil Deteksi & Pengenalan", use_container_width=True)
+            st.success(f"Jumlah wajah terdeteksi: {len(results)}")
+            st.write("Nama terdeteksi:", results if results else ["Tidak ada wajah terdeteksi"])
 
         if st.button("Reset"):
             st.rerun()
 
 
-# MODE 2: Webcam Realtime
+# MODE WEBCAM
 
 elif menu == "Webcam":
-    run = st.checkbox("Mulai Webcam")
+    run = st.checkbox("Aktifkan Kamera")
     FRAME_WINDOW = st.image([])
 
     camera = cv2.VideoCapture(0)
@@ -100,26 +117,23 @@ elif menu == "Webcam":
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
         for (x, y, w, h) in faces:
             roi = gray[y:y+h, x:x+w]
             label_id, conf = recognizer.predict(roi)
             name = label_dict.get(label_id, "Unknown") if conf < 80 else "Unknown"
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (0,255,0), 2)
             cv2.putText(frame, f"{name} ({conf:.0f})", (x, y-10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
 
         FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     camera.release()
 
 
-# Footer
+# FOOTER
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown(
-    "<p style='text-align:center;color:gray;'>"
-    "Dibuat dengan oleh <b>Rifaudin</b> | "
-    "<i>Pengolahan Citra Digital - Deteksi & Pengenalan Wajah</i></p>",
+    "<p style='text-align:center;color:gray;'>Dibuat oleh <b>Rifaudin</b> | Mata Kuliah Pengolahan Citra Digital | Universitas XYZ</p>",
     unsafe_allow_html=True
 )
