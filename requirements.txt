@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-=======
 streamlit==1.28.2
-opencv-python==4.7.0.72
-opencv-contrib-python==4.7.0.72
+opencv-contrib-python-headless==4.10.0.84
 numpy==1.24.3
 Pillow==9.5.0
 matplotlib==3.7.1
->>>>>>> ff4d9c32220928c0a89820032b5e51324c454f04
+torch==2.1.0
